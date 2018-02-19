@@ -7,11 +7,15 @@ public class VendingMachine implements IVendingMachineMaintenance, IVendingMachi
     private ISlotManager _slotManager;
     private ICoinManager _coinManager;
 
-
-    public VendingMachine(int noOfSlots, List<Double> availableChangeTypes)
+    public VendingMachine(ISlotManager slotManager, ICoinManager coinManager)
     {
-        _slotManager = new SlotManager(noOfSlots);
-        _coinManager = new CoinManager(availableChangeTypes);
+        _slotManager = slotManager;
+        _coinManager = coinManager;
+    }
+
+    public VendingMachine(VendingMachine vm) {
+        _slotManager = vm._slotManager;
+        _coinManager = vm._coinManager;
     }
 
     public int getQuantityOfItemInSlot(int slot) {
@@ -39,6 +43,14 @@ public class VendingMachine implements IVendingMachineMaintenance, IVendingMachi
     }
 
     public List<Double> buyProduct(int slot, List<Double> coins) {
+        if (_slotManager.getItemQuantityInSlot(slot) <= 0) {
+            throw new IllegalStateException(String.format("No item left in slot %d", slot));
+        }
+
+        if (!_coinManager.areCoinTypesAvailable(coins)) {
+            throw new IllegalArgumentException("One more more provided coins are not accepted");
+        }
+
         Double slotPrice = _slotManager.getSlotItemPrice(slot);
         double paidAmount = coins.stream().mapToDouble(Double::doubleValue).sum();
 
@@ -52,9 +64,28 @@ public class VendingMachine implements IVendingMachineMaintenance, IVendingMachi
         ChangeResult result = _coinManager.getChangeForSell(calculateChangesFor);
 
         if (result.is_success()) {
+            updateMachineState(slot, coins);
+
             return result.get_changes();
         }
 
-        return new ArrayList<>();
+        return coins;
+    }
+
+    private void updateMachineState(int slotToRemoveItemFrom, List<Double> coinsToadd) {
+        decreaseItemByOneFromSlot(slotToRemoveItemFrom);
+        addUserGivenCoinsToMachine(coinsToadd);
+    }
+
+    private void decreaseItemByOneFromSlot(int slot) {
+        int numberOfItemInSlot =_slotManager.getItemQuantityInSlot(slot);
+        _slotManager.setItemQuantityInSlot(slot, numberOfItemInSlot - 1);
+    }
+
+    private void addUserGivenCoinsToMachine(List<Double> coins) {
+        for (Double coin : coins) {
+            int currentAmount = _coinManager.getAvailableAmountOfCoinType(coin);
+            _coinManager.setAvailableAmountOfCoinType(coin, currentAmount + 1);
+        }
     }
 }

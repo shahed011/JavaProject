@@ -26,25 +26,33 @@ public class CoinManager implements ICoinManager {
         _coinAmountMap.put(coinType, amount);
     }
 
+    public boolean areCoinTypesAvailable(List<Double> coins) {
+        for (Double coin : coins) {
+            if (!_coinAmountMap.containsKey(coin)) return false;
+        }
+
+        return true;
+    }
+
     public ChangeResult getChangeForSell(double amount) {
         TreeMap<Double, Integer> cloneMap = new TreeMap<>(_coinAmountMap);
         List<Double> changesToReturn = new ArrayList<>();
 
         for (Double value : _coinAmountMap.descendingMap().keySet()) {
 
-            int numCoins = (int) (amount / value);
+            if (value > amount) continue;
 
-            if (numCoins > 0) {
-                int old = _coinAmountMap.get(value);
-                if (numCoins < old) {
-                    _coinAmountMap.put(value, old - numCoins);
+            int availableCoins = _coinAmountMap.get(value);
 
-                    for (int i=0; i<numCoins; i++) {
-                        changesToReturn.add(value);
-                    }
+            for (int i = 1; i <= availableCoins; i++) {
+                changesToReturn.add(value);
+                _coinAmountMap.put(value, availableCoins - i);
 
-                    amount = amount % value;
-                    amount = Math.round(amount*100)/100.0d;
+                amount = amount - value;
+                amount = Math.round(amount*100)/100.0d;
+
+                if (amount == 0.0 || amount < value) {
+                    break;
                 }
             }
 
