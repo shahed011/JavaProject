@@ -1,6 +1,5 @@
 package com.solution;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class VendingMachine implements IVendingMachineMaintenance, IVendingMachineConsumer {
